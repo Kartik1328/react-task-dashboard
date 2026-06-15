@@ -1,4 +1,8 @@
-function TaskCard({title,description,priority,status}) {
+function TaskCard({title,description,priority,status, onDelete}) {
+
+ //these are basically the props that we are passing to the TaskCard component from the TaskList component. 
+ // We are also passing the onDelete function as a prop to the TaskCard component so that we can delete the task when the delete button is clicked.
+ //they are passed as a functional arguments.
 
 const statusStyles = {
   todo: { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200' },
@@ -21,9 +25,19 @@ const s = statusStyles[status] || statusStyles['todo']
 <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 hover:shadow-md transition-shadow">
     <div className="flex items-start justify-between gap-2">
       <h3 className="font-semibold text-gray-800 text-base">{title}</h3>
+        <div className="flex items-center gap-2 shrink-0">
+
       <span className={`text-xs px-2 py-1 rounded-full font-medium border ${s.bg} ${s.text} ${s.border}`}>
         {status}
       </span>
+          <button
+      onClick={onDelete}
+      className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none"
+    >
+      ×
+    </button>
+      </div>
+
     </div>
 
     <p className="text-sm text-gray-500 mt-1">{description}</p>
