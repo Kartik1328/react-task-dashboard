@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTasks } from '../context/TaskContext' 
 
 const emptyForm = {
   title: '',
@@ -7,7 +8,8 @@ const emptyForm = {
   priority: 'medium',
 }
 
-function TaskForm({ onAddTask }) {
+function TaskForm() {  // ← remove onAddTask prop
+  const { addTask } = useTasks() // ← get addTask from context
   const [form, setForm] = useState(emptyForm)
   const [errors, setErrors] = useState({})
 
@@ -15,10 +17,7 @@ function TaskForm({ onAddTask }) {
   function handleChange(e) {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
-    // Clear error for this field as user types
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }))
-    }
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }))
   }
 
   function validate() {
@@ -28,18 +27,13 @@ function TaskForm({ onAddTask }) {
     return newErrors
   }
 
+
   function handleSubmit(e) {
     e.preventDefault()
     const newErrors = validate()
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
-    }
-    onAddTask({
-      ...form,
-      id: Date.now(), // temporary unique ID until we have a backend
-    })
-    setForm(emptyForm) // reset form
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return }
+    addTask(form)                                   // ← calls context directly
+    setForm(emptyForm)
     setErrors({})
   }
 
