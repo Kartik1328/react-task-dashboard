@@ -61,6 +61,7 @@ const taskSlice = createSlice({
     activeFilter: 'all',
     status: 'idle',           // 'idle' | 'loading' | 'succeeded' | 'failed'
     error: null,
+    searchQuery: '',        // ← add this
   },
 
   // reducers = synchronous actions
@@ -85,6 +86,10 @@ const taskSlice = createSlice({
     setFilter: (state, action) => {
       state.activeFilter = action.payload
     },
+
+    setSearchQuery: (state, action) => {
+  state.searchQuery = action.payload
+},
   },
 
   // extraReducers = handle async thunk lifecycle
@@ -110,7 +115,7 @@ const taskSlice = createSlice({
 })
 
 // Export actions — these are what components dispatch
-export const { addTask, deleteTask, updateStatus, setFilter } = taskSlice.actions
+export const { addTask, deleteTask, updateStatus, setFilter, setSearchQuery } = taskSlice.actions
 
 // Export selectors — these are what components read
 // Selectors are just functions that take state and return a piece of it
@@ -118,13 +123,22 @@ export const selectAllTasks = (state) => state.tasks.items
 export const selectFilter = (state) => state.tasks.activeFilter
 export const selectStatus = (state) => state.tasks.status
 export const selectError = (state) => state.tasks.error
+export const selectSearchQuery = (state) => state.tasks.searchQuery
+
 
 // Derived selector — filtered tasks computed from store
 export const selectFilteredTasks = (state) => {
   const tasks = state.tasks.items
   const filter = state.tasks.activeFilter
-  if (filter === 'all') return tasks
-  return tasks.filter((t) => t.status === filter)
+    const query = state.tasks.searchQuery.toLowerCase()
+
+  return tasks
+    .filter((t) => filter === 'all' || t.status === filter)
+    .filter((t) =>
+      query === '' ||
+      t.title.toLowerCase().includes(query) ||
+      t.description.toLowerCase().includes(query)
+    )
 }
 
 export default taskSlice.reducer

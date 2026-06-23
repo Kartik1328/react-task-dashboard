@@ -10,6 +10,8 @@ import {
 } from '../../store/taskSlice'
 import TaskCardRedux from './TaskCardRedux'
 import TaskFormRedux from './TaskFormRedux'
+import SearchBar from './SearchBar'            // ← add
+import ScrollStats from './ScrollStats'        // ← add
 
 const filters = ['all', 'todo', 'in-progress', 'done']
 
@@ -20,11 +22,8 @@ function TaskListRedux() {
   const status = useSelector(selectStatus)
   const error = useSelector(selectError)
 
-  // Fetch on mount — dispatch the thunk
   useEffect(() => {
-    if (status === 'idle') {
-      dispatch(fetchTasksFromAPI())
-    }
+    if (status === 'idle') dispatch(fetchTasksFromAPI())
   }, [status, dispatch])
 
   if (status === 'loading') return (
@@ -43,6 +42,8 @@ function TaskListRedux() {
   return (
     <div className="mt-6">
       <TaskFormRedux />
+      <ScrollStats />       {/* ← throttle demo */}
+      <SearchBar />         {/* ← debounce demo */}
 
       {/* Filter buttons */}
       <div className="flex gap-2 mb-6 flex-wrap">
