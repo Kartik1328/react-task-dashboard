@@ -15,7 +15,7 @@ import ScrollStats from './ScrollStats'        // ← add
 
 const filters = ['all', 'todo', 'in-progress', 'done']
 
-function TaskListRedux() {
+function TaskListRedux({ hideForm = false }) {
   const dispatch = useDispatch()
   const filteredTasks = useSelector(selectFilteredTasks)
   const activeFilter = useSelector(selectFilter)
@@ -41,7 +41,7 @@ function TaskListRedux() {
 
   return (
     <div className="mt-6">
-      <TaskFormRedux />
+      {!hideForm && <TaskFormRedux />}
       <ScrollStats />       {/* ← throttle demo */}
       <SearchBar />         {/* ← debounce demo */}
 
