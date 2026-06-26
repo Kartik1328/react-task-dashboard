@@ -16,6 +16,8 @@ import TasksPage from './pages/TasksPage'
 import TaskDetailPage from './pages/TaskDetailPage'
 import AboutPage from './pages/AboutPage'
 import PatternsPage from './pages/PatternsPage'
+import TypeScriptPage from './pages/TypeScriptPage'
+
 
 
 createRoot(document.getElementById('root')).render(
@@ -57,6 +59,10 @@ createRoot(document.getElementById('root')).render(
                     <p>Page not found</p>
                   </div>
                 } />
+
+                <Route path="/typescript" element={
+  <ProtectedRoute><TypeScriptPage /></ProtectedRoute>
+} />
 
               </Route>
             </Routes>
