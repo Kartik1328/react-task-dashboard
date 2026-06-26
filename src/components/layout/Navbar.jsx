@@ -20,6 +20,7 @@ function Navbar() {
     { to: '/about', label: 'About' },
     { to: '/advanced', label: 'Advanced Hooks' },
     { to: '/patterns', label: 'Patterns' },
+    { to: '/typescript', label: 'TypeScript' },
   ]
 
   return (
