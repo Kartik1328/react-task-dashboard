@@ -11,14 +11,15 @@ interface DemoTask {
   priority: Priority
   tags?: string[]   // optional array
 }
+//interface defines the shape of the object.
 
 // 2. Type
-type ButtonVariant = 'primary' | 'secondary' | 'danger'
+type ButtonVariant = 'primary' | 'secondary' | 'danger' 
 
 // 3. Generic function
 function getFirstItem<T>(arr: T[]): T | undefined {
   return arr[0]
-}
+}   
 
 // 4. Enum (alternative to union types)
 enum AppraisalStatus {
