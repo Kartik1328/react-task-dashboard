@@ -1,0 +1,662 @@
+useState:
+
+import { useState } from 'react'
+
+// Basic
+const [value, setValue] = useState(initialValue)
+
+// Examples
+const [count, setCount] = useState(0)
+const [name, setName] = useState('')
+const [isOpen, setIsOpen] = useState(false)
+const [tasks, setTasks] = useState([])
+const [user, setUser] = useState(null)
+
+// Update examples
+setCount(5)                           // direct value
+setCount(prev => prev + 1)           // functional update — use when new state depends on old
+setTasks(prev => [...prev, newTask]) // adding to array
+setTasks(prev => prev.filter(t => t.id !== id))  // removing from array
+setTasks(prev => prev.map(t =>       // updating one item
+  t.id === id ? { ...t, status: 'done' } : t
+))
+
+// Object state
+const [form, setForm] = useState({ name: '', email: '' })
+setForm(prev => ({ ...prev, name: 'Kartikey' }))  // update one field
+//--------------------------------------------------
+
+useEffect:
+
+import { useEffect } from 'react'
+
+// Runs on every render — almost never use this
+useEffect(() => {
+  console.log('renders every time')
+})
+
+// Runs ONCE on mount — empty dependency array
+useEffect(() => {
+  fetchData()
+}, [])
+
+// Runs when dependency changes
+useEffect(() => {
+  fetchTaskById(id)
+}, [id])
+
+// Cleanup — runs before next effect OR on unmount
+useEffect(() => {
+  const timer = setInterval(() => {}, 1000)
+  const subscription = subscribe()
+  window.addEventListener('resize', handler)
+
+  return () => {
+    clearInterval(timer)      // cleanup
+    subscription.unsubscribe()
+    window.removeEventListener('resize', handler)
+  }
+}, [])
+
+// Async inside useEffect — NEVER make callback async directly
+// ❌ Wrong
+useEffect(async () => { await fetchData() }, [])
+
+// ✅ Correct
+useEffect(() => {
+  async function load() {
+    const data = await fetchData()
+    setTasks(data)
+  }
+  load()
+}, [])
+
+//--------------------------------------------------
+
+
+
+useRef-
+
+import { useRef } from 'react'
+
+// DOM access
+const inputRef = useRef(null)
+<input ref={inputRef} />
+inputRef.current.focus()
+inputRef.current.value
+
+// Persist value without re-render
+const countRef = useRef(0)
+countRef.current += 1    // updating doesn't re-render
+
+// Store previous value
+const prevValue = useRef(value)
+useEffect(() => {
+  prevValue.current = value  // update after render
+}, [value])
+
+// Store timer ID
+const timerRef = useRef(null)
+timerRef.current = setTimeout(() => {}, 300)
+clearTimeout(timerRef.current)
+
+//--------------------------------------------------
+
+
+useContext-
+
+import { createContext, useContext, useState } from 'react'
+
+// Step 1 — create context
+const TaskContext = createContext(null)
+
+// Step 2 — create provider
+export function TaskProvider({ children }) {
+  const [tasks, setTasks] = useState([])
+
+  return (
+    <TaskContext.Provider value={{ tasks, setTasks }}>
+      {children}
+    </TaskContext.Provider>
+  )
+}
+
+// Step 3 — custom hook to consume
+export function useTasks() {
+  const context = useContext(TaskContext)
+  if (!context) throw new Error('useTasks must be inside TaskProvider')
+  return context
+}
+
+// Step 4 — use in component
+function TaskList() {
+  const { tasks, setTasks } = useTasks()
+}
+
+// Step 5 — wrap app
+<TaskProvider>
+  <App />
+</TaskProvider>
+
+//--------------------------------------------------
+
+
+useReducer-
+
+import { useReducer } from 'react'
+
+// Step 1 — define reducer
+function taskReducer(state, action) {
+  switch (action.type) {
+    case 'ADD':
+      return [...state, action.payload]
+    case 'DELETE':
+      return state.filter(t => t.id !== action.payload)
+    case 'UPDATE':
+      return state.map(t =>
+        t.id === action.payload.id ? { ...t, ...action.payload } : t
+      )
+    default:
+      return state
+  }
+}
+
+// Step 2 — use in component
+const [tasks, dispatch] = useReducer(taskReducer, [])
+
+// Step 3 — dispatch actions
+dispatch({ type: 'ADD', payload: newTask })
+dispatch({ type: 'DELETE', payload: taskId })
+dispatch({ type: 'UPDATE', payload: { id: 1, status: 'done' } })
+
+//--------------------------------------------------
+
+
+
+useMemo-
+
+import { useMemo } from 'react'
+
+// Memoize expensive calculation
+// Only recomputes when dependencies change
+const filteredTasks = useMemo(() => {
+  return tasks.filter(t =>
+    filter === 'all' || t.status === filter
+  )
+}, [tasks, filter])
+
+// Memoize object to prevent re-renders
+const config = useMemo(() => ({
+  theme: 'dark',
+  language: 'en'
+}), [])  // stable reference — never recreated
+
+// When to use:
+// ✅ Expensive computation (filtering large lists, sorting)
+// ✅ Object/array passed as prop to memoized child
+// ❌ Simple calculations — overhead not worth it
+
+
+//--------------------------------------------------
+
+
+
+useCallback-
+
+import { useCallback } from 'react'
+
+// Memoize function reference
+// Without useCallback — new function created every render
+// Breaks React.memo on child components
+
+const addTask = useCallback((task) => {
+  setTasks(prev => [task, ...prev])
+}, [])  // no dependencies — function never changes
+
+const deleteTask = useCallback((id) => {
+  setTasks(prev => prev.filter(t => t.id !== id))
+}, [])
+
+const fetchByFilter = useCallback((filter) => {
+  fetchTasks(filter)
+}, [fetchTasks])  // depends on fetchTasks
+
+// useMemo vs useCallback:
+// useMemo    → caches a VALUE    → useMemo(() => computeValue(), [deps])
+// useCallback → caches a FUNCTION → useCallback(() => doSomething(), [deps])
+// useCallback(fn, deps) === useMemo(() => fn, deps)
+
+
+//--------------------------------------------------
+
+
+
+useLayoutEffect-
+
+import { useLayoutEffect, useRef, useState } from 'react'
+
+// Same as useEffect BUT fires BEFORE browser paints
+// Use for DOM measurements to prevent visual flicker
+
+function Tooltip({ text }) {
+  const ref = useRef(null)
+  const [position, setPosition] = useState('top')
+
+  useLayoutEffect(() => {
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    // Measure DOM before paint — no flicker
+    if (rect.top < 100) setPosition('bottom')
+  }, [])
+
+  return <div ref={ref}>{text}</div>
+}
+
+// useEffect  → runs AFTER paint → can cause flicker
+// useLayoutEffect → runs BEFORE paint → no flicker
+// 99% of time use useEffect
+// useLayoutEffect only for DOM measurement + immediate visual correction
+
+//--------------------------------------------------
+
+
+Custom Hook-
+
+// Rules:
+// 1. Name must start with "use"
+// 2. Can call other hooks inside
+// 3. Reusable stateful logic
+
+// useFetch — data fetching
+function useFetch(url) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function fetch() {
+      try {
+        setLoading(true)
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const json = await res.json()
+        if (!cancelled) setData(json)
+      } catch (err) {
+        if (!cancelled) setError(err.message)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    fetch()
+    return () => { cancelled = true }
+  }, [url])
+
+  return { data, loading, error }
+}
+
+// useDebounce
+function useDebounce(value, delay = 300) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay)
+    return () => clearTimeout(timer)
+  }, [value, delay])
+
+  return debouncedValue
+}
+
+// useLocalStorage
+function useLocalStorage(key, initialValue) {
+  const [value, setValue] = useState(() => {
+    try {
+      const item = localStorage.getItem(key)
+      return item ? JSON.parse(item) : initialValue
+    } catch {
+      return initialValue
+    }
+  })
+
+  const setStoredValue = useCallback((newValue) => {
+    setValue(newValue)
+    localStorage.setItem(key, JSON.stringify(newValue))
+  }, [key])
+
+  return [value, setStoredValue]
+}
+
+// Usage
+const { data, loading, error } = useFetch('/api/tasks')
+const debouncedSearch = useDebounce(searchInput, 400)
+const [theme, setTheme] = useLocalStorage('theme', 'light')
+
+
+//--------------------------------------------------
+
+
+REDUX TOOLKIT — Complete syntax revision
+
+Store setup
+
+// src/store/store.js
+import { configureStore } from '@reduxjs/toolkit'
+import taskReducer from './taskSlice'
+import authReducer from './authSlice'
+
+const store = configureStore({
+  reducer: {
+    tasks: taskReducer,   // state.tasks
+    auth: authReducer,    // state.auth
+  },
+  // middleware, devTools etc auto-configured by RTK
+})
+
+export default store
+export type RootState = ReturnType<typeof store.getState>
+export type AppDispatch = typeof store.dispatch
+
+//--------------------------------------------------
+
+
+createSlice-
+
+import { createSlice } from '@reduxjs/toolkit'
+
+const taskSlice = createSlice({
+  name: 'tasks',              // prefix for action types
+  initialState: {
+    items: [],
+    activeFilter: 'all',
+    status: 'idle',           // 'idle' | 'loading' | 'succeeded' | 'failed'
+    error: null,
+  },
+
+  reducers: {
+    // Immer active — can mutate directly
+    addTask: (state, action) => {
+      state.items.unshift(action.payload)
+    },
+    deleteTask: (state, action) => {
+      state.items = state.items.filter(t => t.id !== action.payload)
+    },
+    updateStatus: (state, action) => {
+      const task = state.items.find(t => t.id === action.payload.id)
+      if (task) task.status = action.payload.status
+    },
+    setFilter: (state, action) => {
+      state.activeFilter = action.payload
+    },
+  },
+
+  // Handle async thunk lifecycle
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchTasks.pending, (state) => {
+        state.status = 'loading'
+      })
+      .addCase(fetchTasks.fulfilled, (state, action) => {
+        state.status = 'succeeded'
+        state.items = action.payload
+      })
+      .addCase(fetchTasks.rejected, (state, action) => {
+        state.status = 'failed'
+        state.error = action.payload
+      })
+  }
+})
+
+// Export actions
+export const { addTask, deleteTask, updateStatus, setFilter } = taskSlice.actions
+
+// Export selectors
+export const selectAllTasks = state => state.tasks.items
+export const selectFilter = state => state.tasks.activeFilter
+export const selectStatus = state => state.tasks.status
+
+// Export reducer
+export default taskSlice.reducer
+
+
+//--------------------------------------------------
+
+
+createAsyncThunk-
+
+import { createAsyncThunk } from '@reduxjs/toolkit'
+
+// Syntax:
+// createAsyncThunk('sliceName/actionName', async (arg, thunkAPI) => {})
+
+export const fetchTasks = createAsyncThunk(
+  'tasks/fetchAll',           // action type string
+  async (filters, { rejectWithValue }) => {
+    // filters = argument passed when dispatching
+    // rejectWithValue = send custom error to rejected case
+    try {
+      const res = await fetch(`/api/tasks?status=${filters?.status || 'all'}`)
+      if (!res.ok) throw new Error('Fetch failed')
+      return await res.json()   // becomes action.payload in fulfilled
+    } catch (err) {
+      return rejectWithValue(err.message)  // becomes action.payload in rejected
+    }
+  }
+)
+
+export const createTask = createAsyncThunk(
+  'tasks/create',
+  async (taskData, { rejectWithValue }) => {
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData),
+      })
+      return await res.json()
+    } catch (err) {
+      return rejectWithValue(err.message)
+    }
+  }
+)
+
+// Dispatching thunks
+dispatch(fetchTasks())                    // no args
+dispatch(fetchTasks({ status: 'todo' })) // with args
+dispatch(createTask({ title: 'New' }))
+
+//--------------------------------------------------
+
+
+useSelector + useDispatch
+
+
+import { useSelector, useDispatch } from 'react-redux'
+import {
+  selectAllTasks,
+  selectFilter,
+  selectStatus,
+  addTask,
+  deleteTask,
+  setFilter,
+  fetchTasks,
+} from '../store/taskSlice'
+
+function TaskList() {
+  const dispatch = useDispatch()
+
+  // Reading state
+  const tasks = useSelector(selectAllTasks)
+  const filter = useSelector(selectFilter)
+  const status = useSelector(state => state.tasks.status) // inline selector
+
+  // Fetch on mount
+  useEffect(() => {
+    if (status === 'idle') {
+      dispatch(fetchTasks())
+    }
+  }, [status, dispatch])
+
+  // Dispatching actions
+  function handleAdd(task) {
+    dispatch(addTask(task))              // sync action
+  }
+
+  function handleDelete(id) {
+    dispatch(deleteTask(id))             // sync action
+  }
+
+  function handleFilter(f) {
+    dispatch(setFilter(f))               // sync action
+  }
+
+  function handleFetch() {
+    dispatch(fetchTasks({ status: filter }))  // async thunk
+  }
+}
+
+
+createSelector — memoized selectors
+
+
+import { createSelector } from '@reduxjs/toolkit'
+
+// Input selectors
+const selectTasks = state => state.tasks.items
+const selectFilter = state => state.tasks.activeFilter
+const selectSearch = state => state.tasks.searchQuery
+
+// Derived selector — only recomputes when inputs change
+export const selectFilteredTasks = createSelector(
+  [selectTasks, selectFilter, selectSearch],
+  (tasks, filter, search) => {
+    return tasks
+      .filter(t => filter === 'all' || t.status === filter)
+      .filter(t => !search ||
+        t.title.toLowerCase().includes(search.toLowerCase())
+      )
+  }
+)
+
+// Stats selector
+export const selectTaskStats = createSelector(
+  [selectTasks],
+  (tasks) => ({
+    total:       tasks.length,
+    todo:        tasks.filter(t => t.status === 'todo').length,
+    inProgress:  tasks.filter(t => t.status === 'in-progress').length,
+    done:        tasks.filter(t => t.status === 'done').length,
+    highPriority: tasks.filter(t => t.priority === 'high').length,
+  })
+)
+
+// Usage in component
+const filteredTasks = useSelector(selectFilteredTasks)
+const stats = useSelector(selectTaskStats)
+
+
+//--------------------------------------------------
+
+
+React Router v6 — syntax revision
+
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Link,
+  NavLink,
+  Navigate,
+  Outlet,
+  useNavigate,
+  useParams,
+  useLocation,
+  useSearchParams,
+} from 'react-router-dom'
+
+// Route setup
+<BrowserRouter>
+  <Routes>
+    <Route path="/login" element={<LoginPage />} />
+    <Route element={<Layout />}>          // layout route — no path
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/tasks" element={<TasksPage />} />
+      <Route path="/tasks/:id" element={<TaskDetail />} />
+      <Route path="*" element={<NotFound />} />  // 404
+    </Route>
+  </Routes>
+</BrowserRouter>
+
+// Layout component
+function Layout() {
+  return (
+    <>
+      <Navbar />
+      <Outlet />    // child routes render here
+    </>
+  )
+}
+
+// Protected route
+function ProtectedRoute({ children }) {
+  const { user } = useAuth()
+  const location = useLocation()
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />
+  return children
+}
+
+// Hooks
+const navigate = useNavigate()
+navigate('/tasks')           // go to route
+navigate(-1)                 // go back
+navigate('/tasks', { replace: true })  // replace history
+
+const { id } = useParams()  // /tasks/:id → id = '42'
+
+const location = useLocation()
+location.pathname            // '/tasks'
+location.state               // data passed via navigate
+
+const [searchParams, setSearchParams] = useSearchParams()
+searchParams.get('filter')   // ?filter=todo → 'todo'
+setSearchParams({ filter: 'done' })  // update URL
+
+// Navigation
+<Link to="/tasks">Tasks</Link>
+
+<NavLink
+  to="/tasks"
+  className={({ isActive }) => isActive ? 'active' : ''}
+>
+  Tasks
+</NavLink>
+
+
+//--------------------------------------------------
+
+
+Quick syntax comparison — interview ready
+
+// useState vs useReducer — when to use which
+useState   → simple, independent values
+useReducer → multiple related values, complex update logic
+
+// useMemo vs useCallback
+useMemo(()    => computeValue(), [deps])  // caches VALUE
+useCallback(() => doSomething(), [deps])  // caches FUNCTION
+
+// useEffect timing
+useEffect     → after render + after paint  (async)
+useLayoutEffect → after render, before paint (sync)
+
+// Context vs Redux
+Context  → simple global state, theme, auth, small apps
+Redux    → complex state, many async operations, large apps
+
+// forwardRef vs useImperativeHandle
+forwardRef           → expose DOM node to parent
+useImperativeHandle  → expose specific methods to parent (not raw DOM)
+
+
+
